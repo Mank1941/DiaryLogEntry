@@ -65,7 +65,7 @@ class _DiaryEntryScreenState extends State<DiaryEntryScreen> {
       setState(() {
         diaryTextController.clear;
       });
-      widget.onLogAdded?.call();
+      widget.onLogAdded.call();
 
       //Entry added succesfully
       Navigator.pop(context); //Go back to previous screen
@@ -91,10 +91,10 @@ class _DiaryEntryScreenState extends State<DiaryEntryScreen> {
             TextField(
               controller: diaryTextController,
               decoration:
-                  InputDecoration(labelText: 'Diary Text (140 characters)'),
+                  const InputDecoration(labelText: 'Diary Text (140 characters)'),
               maxLength: 140,
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             TextButton(
               onPressed: () => _selectDate(context),
               child: const Text('Select Date'),

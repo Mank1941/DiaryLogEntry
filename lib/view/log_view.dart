@@ -83,9 +83,9 @@ class _DiaryLogScreenState extends State<DiaryLogScreen> {
   }
 
   Widget _ratingToStars(int rating) {
-    final starIcon =
+    const starIcon =
         Icon(Icons.star, color: Colors.amber); // Star icon with amber color
-    final emptyStarIcon = Icon(Icons.star_border,
+    const emptyStarIcon = Icon(Icons.star_border,
         color: Colors.amber); // Empty star icon with amber color
 
     // Create a list of star icons based on the rating
@@ -107,12 +107,12 @@ class _DiaryLogScreenState extends State<DiaryLogScreen> {
       children: [
         // Rating Icons
         _ratingToStars(entry.rating),
-        Padding(
+        const Padding(
           padding: EdgeInsets.only(left: 32.0),
         ),
         //Delete Icom
         IconButton(
-          icon: Icon(Icons.delete),
+          icon: const Icon(Icons.delete),
           onPressed: () {
             _deleteEntry(entry);
           },
@@ -123,7 +123,7 @@ class _DiaryLogScreenState extends State<DiaryLogScreen> {
 
   PopupMenuButton<String> _buildPopupMenuButton() {
     return PopupMenuButton<String>(
-      icon: Icon(Icons.more_vert), // Three-dot vertical icon
+      icon: const Icon(Icons.more_vert), // Three-dot vertical icon
       itemBuilder: (BuildContext context) {
         return <PopupMenuEntry<String>>[
           const PopupMenuItem<String>(
@@ -163,7 +163,7 @@ class _DiaryLogScreenState extends State<DiaryLogScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Filter Logs'),
+          title: const Text('Filter Logs'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
@@ -202,13 +202,13 @@ class _DiaryLogScreenState extends State<DiaryLogScreen> {
           ),
           actions: <Widget>[
             TextButton(
-              child: Text('Cancel'),
+              child: const Text('Cancel'),
               onPressed: () {
                 Navigator.of(context).pop();
               },
             ),
             TextButton(
-              child: Text('OK'),
+              child: const Text('OK'),
               onPressed: () {
                 // Filter logs for the selected month and year
                 Navigator.of(context).pop();
@@ -227,7 +227,7 @@ class _DiaryLogScreenState extends State<DiaryLogScreen> {
     // Define a title for the PDF
     pdf.addPage(pw.MultiPage(
       pageFormat: PdfPageFormat.a4,
-      margin: pw.EdgeInsets.all(32),
+      margin: const pw.EdgeInsets.all(32),
       build: (pw.Context context) {
         return [
           pw.Header(
@@ -291,14 +291,14 @@ class _DiaryLogScreenState extends State<DiaryLogScreen> {
                 // Day
                 Text(
                   formattedDate,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 // Description
                 Text(entry.description,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 18,
                     )),
                 _buildLogEntry(entry, index),
