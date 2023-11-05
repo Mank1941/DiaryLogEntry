@@ -1,42 +1,70 @@
+import 'dart:math';
+
 import 'package:hive/hive.dart';
 import 'package:intl/intl.dart';
 
 import "/model/logmodel.dart";
 
 class LogController {
-  var box = Hive.box('logs_box');
+  final Box logBox;
 
-  bool addEntry(LogModel log) {
+  LogController(this.logBox);
+
+  Future<bool> addEntry(LogModel log) async {
     //Conflict: date already exists
     DateTime targetDate = log.date;
-    bool dateExists = box.values.any((existingLog) =>
-        existingLog.date.day == log.date.day &&
-        existingLog.date.month == log.date.month &&
-        existingLog.date.year == log.date.year);
 
-    //print("Does it? $dateExists");
-
-    if (dateExists) {
+    if (await entryExists(targetDate)) {
       //print('Date already exists in the box.');
       return false;
     }
 
-    box.add(log);
+    logBox.put(targetDate.toString(), log);
     return true; //Task Completed
   }
 
-  bool deleteEntry(LogModel entry) {
-    int index = box.values.toList().indexOf(entry);
-
-    try {
-      if (index != -1) {
-        box.deleteAt(index);
-        return true; // Deletion successful
-      }
-      return false; // Entry not found
-    } catch (e) {
-      return false; // An exception occurred, so the deletion failed
+  Future<void> updateEntry(DateTime date, LogModel updatedEntry) async {
+    if (!await entryExists(date)) {
+      throw Exception('No entry found for this date');
     }
+    await logBox.put(date.toString(), updatedEntry);
+  }
+
+  Future<bool> removeEntry(DateTime date) async {
+    if (!await entryExists(date)) {
+      //throw Exception('No entry found for this date');
+      return false;
+    }
+    await logBox.delete(date.toString());
+    return true;
+  }
+
+  Future<bool> entryExists(DateTime date) async {
+    return logBox.containsKey(date.toString());
+  }
+
+  Future<List<LogModel>> searchEntries(String keyword) async {
+    return logBox.values
+        .cast<LogModel>()
+        .where((entry) => entry.description.contains(keyword))
+        .toList();
+  }
+
+  List<LogModel> filterEntries(bool filter, int dateMonth, int dateYear) {
+    print(filter);
+    if (filter) {
+      print("Hello3");
+      return logBox.values
+          .cast<LogModel>()
+          .where((entry) =>
+              entry.date.year == dateYear && entry.date.month == dateMonth)
+          .toList();
+    }
+    return getAllEntries();
+  }
+
+  void deleteEntry(int index) {
+    logBox.deleteAt(index);
   }
 
   void printEntries() {
@@ -50,6 +78,26 @@ class LogController {
   }
 
   List<LogModel> getAllEntries() {
-    return box.values.cast<LogModel>().toList();
+    return logBox.values.cast<LogModel>().toList();
   }
+
+  Future<void> deleteEntryByEntry(LogModel entry) async {
+    final key = logBox.keys
+        .firstWhere((k) => logBox.get(k) == entry, orElse: () => null);
+    if (key != null) {
+      await logBox.delete(key);
+    } else {
+      print('Entry not found');
+    }
+  }
+}
+
+void main() async {
+  Hive.init('path_to_hive_box'); // Initialize Hive
+  Hive.registerAdapter(LogModelAdapter()); // Register your custom TypeAdapter
+
+  var diaryBox = await Hive.openBox<LogModel>('diaryBox');
+  var diaryController = LogController(diaryBox);
+
+  // Now you can use diaryController to manage diary entries
 }

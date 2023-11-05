@@ -1,4 +1,6 @@
+import 'package:assignment2_2/controller/log_controller.dart';
 import 'package:assignment2_2/model/logmodel.dart';
+import 'package:assignment2_2/view/log_add_view.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
@@ -14,24 +16,36 @@ Future<void> main() async {
   // Register the adapter for `CarModel`.
   Hive.registerAdapter(LogModelAdapter());
 
-  // Open the 'cars_box' box for storing car data.
-  await Hive.openBox('logs_box');
+  final logBox = await Hive.openBox('logBox');
+  final LogController logController = LogController(logBox);
 
   // Start the Flutter app with `MainApp` as the root widget.
-  runApp(const MainApp());
+  runApp(MainApp(
+    logController: logController,
+  ));
 }
 
 class MainApp extends StatelessWidget {
-  const MainApp({super.key});
+  final LogController logController;
+  const MainApp({super.key, required this.logController});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.orange,
         scaffoldBackgroundColor: Colors.orange[100],
       ),
-      home: const DiaryLogScreen(),
+      initialRoute: '/',
+      routes: {
+        '/': (context) => DiaryLogScreen(
+              logController: logController,
+            ),
+        '/addEntry': (context) => DiaryEntryScreen(
+              logController: logController,
+            ),
+      },
     );
   }
 }

@@ -1,6 +1,8 @@
 import 'dart:io';
 
+import 'package:assignment2_2/view/components/log_entry_widget.dart';
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import '/view/log_add_view.dart';
 import '/controller/log_controller.dart';
 import '/model/logmodel.dart';
@@ -8,128 +10,21 @@ import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
-class DiaryLogScreen extends StatefulWidget {
-  const DiaryLogScreen({super.key});
+class DiaryLogScreen extends StatelessWidget {
+  final LogController logController;
 
-  @override
-  _DiaryLogScreenState createState() => _DiaryLogScreenState();
-}
+  bool filter = false;
+  int filter_selectedMonth =
+      DateTime.now().month; // Default to the current month
+  int filter_selectedYear = DateTime.now().year; // Default to the current year
 
-class _DiaryLogScreenState extends State<DiaryLogScreen> {
-  final LogController logController = LogController();
-  List<LogModel> diaryEntries = [];
+  DiaryLogScreen({Key? key, required this.logController}) : super(key: key);
 
-  @override
-  void initState() {
-    super.initState();
-    _loadDiaryEntry();
-  }
-
-  //Load Entries
-  void _loadDiaryEntry() {
-    setState(() {
-      diaryEntries = logController.getAllEntries();
-      _sortLogs();
-      //print("Hello");
-    });
-  }
-
-  void _sortLogs() {
-    diaryEntries.sort((a, b) {
-      // Compare by year
-      int yearComparison = a.date.year.compareTo(b.date.year);
-      if (yearComparison != 0) {
-        return yearComparison;
-      }
-
-      // Compare by month
-      int monthComparison = a.date.month.compareTo(b.date.month);
-      if (monthComparison != 0) {
-        return monthComparison;
-      }
-
-      // Compate by day
-      int dayCOmparison = a.date.day.compareTo(b.date.day);
-      return dayCOmparison;
-    });
-  }
-
-  void _filterEntries(int? month, int? year) {
-    setState(() {
-      //print("Hello world");
-      diaryEntries = diaryEntries
-          .where((log) => log.date.month == month && log.date.year == year)
-          .toList();
-    });
-  }
-
-  void _deleteEntry(LogModel entry) {
-    logController.deleteEntry(entry);
-    _loadDiaryEntry(); // Reload the list after deletion
-  }
-
-  bool _isDifferentMonthYear(int index) {
-    //To help break to a new group
-    if (index == 0) {
-      return true; // Always show for the first log
-    }
-
-    final currentLog = diaryEntries[index];
-    final previousLog = diaryEntries[index - 1];
-
-    // Compare the month and year of the current log with the previous log
-    return currentLog.date.month != previousLog.date.month ||
-        currentLog.date.year != previousLog.date.year;
-  }
-
-  Widget _ratingToStars(int rating) {
-    const starIcon =
-        Icon(Icons.star, color: Colors.amber); // Star icon with amber color
-    const emptyStarIcon = Icon(Icons.star_border,
-        color: Colors.amber); // Empty star icon with amber color
-
-    // Create a list of star icons based on the rating
-    final stars = List<Widget>.generate(5, (index) {
-      if (index < rating) {
-        return starIcon;
-      } else {
-        return emptyStarIcon;
-      }
-    });
-
-    return Row(
-      children: stars,
-    );
-  }
-
-  Widget _buildLogEntry(LogModel entry, int index) {
-    return Row(
-      children: [
-        // Rating Icons
-        _ratingToStars(entry.rating),
-        const Padding(
-          padding: EdgeInsets.only(left: 32.0),
-        ),
-        //Delete Icom
-        IconButton(
-          icon: const Icon(Icons.delete),
-          onPressed: () {
-            _deleteEntry(entry);
-          },
-        ),
-      ],
-    );
-  }
-
-  PopupMenuButton<String> _buildPopupMenuButton() {
+  PopupMenuButton<String> _buildPopupMenuButton(BuildContext context) {
     return PopupMenuButton<String>(
       icon: const Icon(Icons.more_vert), // Three-dot vertical icon
-      itemBuilder: (BuildContext context) {
+      itemBuilder: (context) {
         return <PopupMenuEntry<String>>[
-          const PopupMenuItem<String>(
-            value: 'export_pdf',
-            child: Text('Export PDF'),
-          ),
           const PopupMenuItem<String>(
             value: 'filter',
             child: Text('Filter'),
@@ -140,24 +35,22 @@ class _DiaryLogScreenState extends State<DiaryLogScreen> {
           ),
         ];
       },
-      onSelected: (String choice) {
-        if (choice == 'export_pdf') {
-          // Handle PDF export action
-          _exportLogsToPDF(diaryEntries);
-        } else if (choice == 'filter') {
+      onSelected: (String choice) async {
+        if (choice == 'filter') {
           // Handle filter action
-          _showFilterDialog();
+          await _showFilterDialog(context);
         } else if (choice == 'reset filter') {
           // Handle filter action
-          _loadDiaryEntry();
+          filter = false;
         }
+        //print(filter);
       },
     );
   }
 
-  Future<void> _showFilterDialog() async {
-    int? selectedMonth = DateTime.now().month; // Default to the current month
-    int? selectedYear = DateTime.now().year; // Default to the current year
+  Future<void> _showFilterDialog(BuildContext context) async {
+    int selectedMonth = DateTime.now().month; // Default to the current month
+    int selectedYear = DateTime.now().year; // Default to the current year
 
     await showDialog(
       context: context,
@@ -178,9 +71,8 @@ class _DiaryLogScreenState extends State<DiaryLogScreen> {
                   );
                 }),
                 onChanged: (value) {
-                  setState(() {
-                    selectedMonth = value;
-                  });
+                  selectedMonth = value!;
+                  // setState(() {});
                 },
               ),
               // Dropdown for selecting the year
@@ -193,9 +85,8 @@ class _DiaryLogScreenState extends State<DiaryLogScreen> {
                   );
                 }),
                 onChanged: (value) {
-                  setState(() {
-                    selectedYear = value;
-                  });
+                  selectedYear = value!;
+                  //setState(() {});
                 },
               ),
             ],
@@ -212,47 +103,15 @@ class _DiaryLogScreenState extends State<DiaryLogScreen> {
               onPressed: () {
                 // Filter logs for the selected month and year
                 Navigator.of(context).pop();
-                _filterEntries(selectedMonth, selectedYear);
+                filter = true;
+                filter_selectedMonth = selectedMonth;
+                filter_selectedYear = selectedYear;
               },
             ),
           ],
         );
       },
     );
-  }
-
-  Future<void> _exportLogsToPDF(List<LogModel> logEntries) async {
-    final pdf = pw.Document();
-
-    // Define a title for the PDF
-    pdf.addPage(pw.MultiPage(
-      pageFormat: PdfPageFormat.a4,
-      margin: const pw.EdgeInsets.all(32),
-      build: (pw.Context context) {
-        return [
-          pw.Header(
-            level: 0,
-            child: pw.Text('Diary Log Entries'),
-          ),
-          pw.Table.fromTextArray(
-            context: context,
-            data: <List<String>>[
-              <String>['Date', 'Description', 'Rating'],
-              for (var entry in logEntries)
-                <String>[
-                  DateFormat('MMMM dd, y').format(entry.date),
-                  entry.description,
-                  entry.rating.toString(),
-                ],
-            ],
-          ),
-        ];
-      },
-    ));
-
-    // Save the PDF to a file
-    final file = File('diary_log.pdf');
-    await file.writeAsBytes(await pdf.save());
   }
 
   @override
@@ -262,62 +121,87 @@ class _DiaryLogScreenState extends State<DiaryLogScreen> {
       appBar: AppBar(
         title: const Text('Diary Log'),
         actions: [
-          _buildPopupMenuButton(),
+          _buildPopupMenuButton(context),
         ],
       ),
-      body: ListView.builder(
-          itemCount: diaryEntries.length,
-          itemBuilder: (BuildContext context, int index) {
-            final entry = diaryEntries[index];
-            final formattedDate = DateFormat('E, d').format(entry.date);
-
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (_isDifferentMonthYear(index))
-                  Column(children: [
-                    const Divider(
-                      color: Colors.grey,
-                      thickness: 2.0,
-                      height: 0,
-                    ),
-                    //Month and Year
-                    Text(DateFormat('MMMM, y').format(entry.date),
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        )),
-                  ]),
-                // Day
-                Text(
-                  formattedDate,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                // Description
-                Text(entry.description,
-                    style: const TextStyle(
-                      fontSize: 18,
-                    )),
-                _buildLogEntry(entry, index),
-              ],
+      body: ValueListenableBuilder(
+        valueListenable: logController.logBox.listenable(),
+        builder: (context, Box box, widget) {
+          if (box.isEmpty) {
+            return const Center(
+              child: Text('No entries found'),
             );
-          }),
+          } else {
+            final entries = box.values.cast<LogModel>().toList();
+            entries.sort((a, b) => b.date
+                .compareTo(a.date)); // Sort entries by date in descending order
+            return Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: ValueListenableBuilder(
+                valueListenable: logController.logBox.listenable(),
+                builder: (context, Box box, widget) {
+                  if (box.isEmpty) {
+                    return const Center(
+                      child: Text('No entries found'),
+                    );
+                  } else {
+                    final entries = box.values.cast<LogModel>().toList();
+                    entries.sort((a, b) => b.date.compareTo(a.date));
+
+                    List<Widget> widgets = [];
+                    DateTime? lastDate;
+                    for (int i = 0; i < entries.length; i++) {
+                      final entry = entries[i];
+                      if (lastDate == null ||
+                          entry.date.month != lastDate.month ||
+                          entry.date.year != lastDate.year) {
+                        final headerText =
+                            DateFormat('MMMM yyyy').format(entry.date);
+                        widgets.add(DateHeader(text: headerText));
+                      }
+                      widgets.add(
+                        LogEntryWidget(
+                          entry: entry,
+                          onDelete: () {
+                            logController.deleteEntryByEntry(entry);
+                          },
+                        ),
+                      );
+                      lastDate = entry.date;
+                    }
+
+                    return ListView(
+                      children: widgets,
+                    );
+                  }
+                },
+              ),
+            );
+          }
+        },
+      ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (context) => DiaryEntryScreen(
-                      onLogAdded: () {
-                        _loadDiaryEntry();
-                      },
-                    )),
-          );
+        onPressed: () {
+          Navigator.pushNamed(context, '/addEntry');
         },
         child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
+
+class DateHeader extends StatelessWidget {
+  final String text;
+
+  const DateHeader({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(8.0),
+      child: Text(
+        text,
+        style: Theme.of(context).textTheme.headlineSmall,
       ),
     );
   }

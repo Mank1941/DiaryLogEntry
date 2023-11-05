@@ -4,11 +4,11 @@ import '/model/logmodel.dart'; // Import the LogModel class
 import '/controller/log_controller.dart'; // Import your LogController
 
 class DiaryEntryScreen extends StatefulWidget {
-  final Function onLogAdded;
+  final LogController logController;
 
   const DiaryEntryScreen({
     super.key,
-    required this.onLogAdded,
+    required this.logController,
   });
 
   @override
@@ -16,61 +16,47 @@ class DiaryEntryScreen extends StatefulWidget {
 }
 
 class _DiaryEntryScreenState extends State<DiaryEntryScreen> {
-  final LogController logController = LogController();
-
-  DateTime selectedDate = DateTime.now(); // Initialize with today's date
-  int? rating;
-  TextEditingController diaryTextController = TextEditingController();
+  DateTime _selectedDate =
+      DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+  int _rating = 3;
+  final TextEditingController _diaryTextController = TextEditingController();
 
   // Function to show date picker
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: selectedDate,
+      initialDate: _selectedDate,
       firstDate: DateTime(2010),
       lastDate: DateTime(2050),
     );
-    if (picked != null && picked != selectedDate) {
+    if (picked != null && picked != _selectedDate) {
       setState(() {
-        selectedDate = picked;
+        _selectedDate = picked;
       });
     }
   }
 
-  void _saveEntry() {
+  Future<void> _saveEntry() async {
     //Get text from text controller
-    final String diaryText = diaryTextController.text;
-    //print("Description: " + diaryText);
+    final String diaryText = _diaryTextController.text;
 
-    if (rating == null) {
-      //Display error message to user
+    if (diaryText == "") {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text("Please select a rating before saving the entry.")),
+        const SnackBar(content: Text("Please Enter a description")),
       );
       return;
     }
 
     // Create a new LogModel entry
-    final LogModel entry = LogModel(
-      date: selectedDate,
+    final LogModel newEntry = LogModel(
+      date: _selectedDate,
       description: diaryText,
-      rating: rating!,
+      rating: _rating,
     );
 
-    print("Date: $selectedDate");
-
-    // Use the LogController to add the entry
-    if (logController.addEntry(entry)) {
-      setState(() {
-        diaryTextController.clear;
-      });
-      widget.onLogAdded.call();
-
-      //Entry added succesfully
-      Navigator.pop(context); //Go back to previous screen
+    if (await widget.logController.addEntry(newEntry)) {
+      Navigator.pop(context);
     } else {
-      //Display an error message to the user
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Date already exists in the Logs")),
       );
@@ -81,51 +67,58 @@ class _DiaryEntryScreenState extends State<DiaryEntryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Diary Entry"),
+        title: const Text('Add Diary Entry'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
             TextField(
-              controller: diaryTextController,
-              decoration:
-                  const InputDecoration(labelText: 'Diary Text (140 characters)'),
+              controller: _diaryTextController,
               maxLength: 140,
+              maxLines: 4, // This allows for multiple lines
+              keyboardType: TextInputType
+                  .multiline, // This sets up the keyboard for multiline input
+              decoration: const InputDecoration(
+                labelText: 'Description',
+                helperText: 'Describe your day in 140 characters',
+              ),
             ),
             const SizedBox(height: 20),
-            TextButton(
-              onPressed: () => _selectDate(context),
-              child: const Text('Select Date'),
-            ),
-            Text(
-                'Selected Date: ${DateFormat('MMMM dd, y').format(selectedDate)}'),
-            //Implement a rating system (star rating or a scale of 1 to 5)
-            const Text('Rating: '),
             Row(
-              children: [1, 2, 3, 4, 5].map((value) {
-                return Row(
-                  children: [
-                    Radio<int>(
-                      value: value,
-                      groupValue: rating,
-                      onChanged: (int? newValue) {
-                        setState(() {
-                          rating = newValue;
-                        });
-                      },
-                    ),
-                    Text(value.toString()),
-                  ],
-                );
-              }).toList(),
+              children: [
+                const Text('Rate your day:'),
+                Slider(
+                  value: _rating.toDouble(),
+                  min: 1,
+                  max: 5,
+                  divisions: 4,
+                  onChanged: (double value) {
+                    setState(() {
+                      _rating = value.toInt();
+                    });
+                  },
+                ),
+              ],
             ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Text(
+                  "Date: ${_selectedDate.toLocal().toString().split(' ')[0]}",
+                ),
+                IconButton(
+                  icon: const Icon(Icons.calendar_today),
+                  onPressed: () => _selectDate(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
             ElevatedButton(
               onPressed: _saveEntry,
               child: const Text('Save Entry'),
             ),
-            //Implement a button to save the entry
           ],
         ),
       ),
