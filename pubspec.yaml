@@ -1,0 +1,26 @@
+name: assignment2_2
+description: A new Flutter project.
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: '>=3.1.2 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  intl: 
+  hive: 
+  hive_flutter: 
+  pdf:
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+  hive_generator: 
+  build_runner: 
+
+flutter:
+  uses-material-design: true
