@@ -1,103 +1,79 @@
-import 'dart:math';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hive/hive.dart';
 import 'package:intl/intl.dart';
 
 import "/model/logmodel.dart";
 
 class LogController {
-  final Box logBox;
+  final user = FirebaseAuth.instance.currentUser;
+  final CollectionReference logCollection;
 
-  LogController(this.logBox);
+  //Construct initializes the refence to the Firestore collection
+  LogController()
+      : logCollection = FirebaseFirestore.instance
+            .collection('users')
+            .doc(FirebaseAuth.instance.currentUser!.uid)
+            .collection('logs');
 
-  Future<bool> addEntry(LogModel log) async {
-    //Conflict: date already exists
-    DateTime targetDate = log.date;
-
-    if (await entryExists(targetDate)) {
-      //print('Date already exists in the box.');
-      return false;
-    }
-
-    logBox.put(targetDate.toString(), log);
-    return true; //Task Completed
+  Future<DocumentReference<Object?>> addEntry(LogModel log) async {
+    //Note check if date exists has to be in screen now
+    return await logCollection.add(log.toMap());
   }
 
-  Future<void> updateEntry(DateTime date, LogModel updatedEntry) async {
-    if (!await entryExists(date)) {
-      throw Exception('No entry found for this date');
-    }
-    await logBox.put(date.toString(), updatedEntry);
+  Future<void> updateEntry(LogModel updatedEntry) async {
+    return await logCollection
+        .doc(updatedEntry.id)
+        .update(updatedEntry.toMap());
   }
 
-  Future<bool> removeEntry(DateTime date) async {
-    if (!await entryExists(date)) {
-      //throw Exception('No entry found for this date');
-      return false;
-    }
-    await logBox.delete(date.toString());
-    return true;
+  Future<void> deleteEntry(String id) async {
+    return await logCollection.doc(id).delete();
   }
 
-  Future<bool> entryExists(DateTime date) async {
-    return logBox.containsKey(date.toString());
-  }
-
-  Future<List<LogModel>> searchEntries(String keyword) async {
-    return logBox.values
-        .cast<LogModel>()
-        .where((entry) => entry.description.contains(keyword))
-        .toList();
-  }
-
-  List<LogModel> filterEntries(bool filter, int dateMonth, int dateYear) {
-    print(filter);
-    if (filter) {
-      print("Hello3");
-      return logBox.values
-          .cast<LogModel>()
-          .where((entry) =>
-              entry.date.year == dateYear && entry.date.month == dateMonth)
-          .toList();
-    }
-    return getAllEntries();
-  }
-
-  void deleteEntry(int index) {
-    logBox.deleteAt(index);
+  Stream<List<LogModel>> getAllEntries() {
+    return logCollection.snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) => LogModel.fromMap(doc)).toList();
+    });
   }
 
   void printEntries() {
-    List<LogModel> logEntries = getAllEntries();
+    List<LogModel> logEntries = getAllEntries() as List<LogModel>;
     for (var entry in logEntries) {
-      final formattedDate = DateFormat('dd, MMM, yyyy').format(entry.date);
+      final formattedDate =
+          DateFormat('dd, MMM, yyyy').format(getDatetime(entry));
       print('Date: $formattedDate');
       print('Description: ${entry.description}');
       print('-------------------------');
     }
   }
 
-  List<LogModel> getAllEntries() {
-    return logBox.values.cast<LogModel>().toList();
+  Future<bool> entryExists(DateTime date) async {
+    final QuerySnapshot logSnapshot =
+        await logCollection.where('date', isEqualTo: date).get();
+
+    return logSnapshot.docs.isNotEmpty;
+  }
+
+  DateTime getDatetime(LogModel log) {
+    return DateTime.parse(log.date.toDate().toString());
+  }
+
+  Timestamp getTimestamp(DateTime date) {
+    return Timestamp.fromDate(date);
+  }
+
+  Future<List<LogModel>> filterEntries(
+      bool filter, int dateMonth, int dateYear) async {
+    final QuerySnapshot logSnapshot = await logCollection
+        .where('date', isEqualTo: DateTime(dateYear, dateMonth, 1))
+        .where('date', isLessThan: DateTime(dateYear, dateMonth + 1, 1))
+        .get();
+
+    return logSnapshot.docs.map((doc) => LogModel.fromMap(doc)).toList();
   }
 
   Future<void> deleteEntryByEntry(LogModel entry) async {
-    final key = logBox.keys
-        .firstWhere((k) => logBox.get(k) == entry, orElse: () => null);
-    if (key != null) {
-      await logBox.delete(key);
-    } else {
-      print('Entry not found');
-    }
+    return await logCollection.doc(entry.id).delete();
   }
-}
-
-void main() async {
-  Hive.init('path_to_hive_box'); // Initialize Hive
-  Hive.registerAdapter(LogModelAdapter()); // Register your custom TypeAdapter
-
-  var diaryBox = await Hive.openBox<LogModel>('diaryBox');
-  var diaryController = LogController(diaryBox);
-
-  // Now you can use diaryController to manage diary entries
 }

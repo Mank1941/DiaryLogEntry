@@ -2,14 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '/model/logmodel.dart'; // Import the LogModel class
 import '/controller/log_controller.dart'; // Import your LogController
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class DiaryEntryScreen extends StatefulWidget {
-  final LogController logController;
+  DiaryEntryScreen({Key? key}) : super(key: key);
 
-  const DiaryEntryScreen({
-    super.key,
-    required this.logController,
-  });
+  final LogController logController = LogController();
 
   @override
   _DiaryEntryScreenState createState() => _DiaryEntryScreenState();
@@ -48,14 +46,20 @@ class _DiaryEntryScreenState extends State<DiaryEntryScreen> {
     }
 
     // Create a new LogModel entry
+    //Gotta convert to Timestamp cause Firestore has Timestamp and not Datetime
+    Timestamp date = widget.logController.getTimestamp(_selectedDate);
+
     final LogModel newEntry = LogModel(
-      date: _selectedDate,
+      date: date,
       description: diaryText,
       rating: _rating,
     );
 
-    if (await widget.logController.addEntry(newEntry)) {
+    if (!await widget.logController
+        .entryExists(widget.logController.getDatetime(newEntry))) {
+      await widget.logController.addEntry(newEntry);
       Navigator.pop(context);
+      //Navigator.pushNamed(context, '/logScreen');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Date already exists in the Logs")),

@@ -17,7 +17,7 @@ class LogModelAdapter extends TypeAdapter<LogModel> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return LogModel(
-      date: fields[0] as DateTime,
+      date: fields[0] as Timestamp,
       description: fields[1] as String,
       rating: fields[2] as int,
     );

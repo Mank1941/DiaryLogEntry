@@ -30,7 +30,8 @@ class LogEntryWidget extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  DateFormat('EE, MMM d').format(entry.date.toLocal()),
+                  DateFormat('EE, MMM d').format(
+                      DateTime.parse(entry.date.toDate().toString()).toLocal()),
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 Row(

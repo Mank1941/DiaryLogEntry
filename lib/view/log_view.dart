@@ -1,6 +1,8 @@
 import 'dart:io';
 
 import 'package:assignment2_2/view/components/log_entry_widget.dart';
+import 'package:assignment2_2/view/log_edit.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '/view/log_add_view.dart';
@@ -10,15 +12,35 @@ import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
-class DiaryLogScreen extends StatelessWidget {
-  final LogController logController;
+import 'package:firebase_auth/firebase_auth.dart';
 
+class DiaryLogScreen extends StatefulWidget {
+  DiaryLogScreen({Key? key}) : super(key: key);
+
+  final LogController logController = LogController();
+
+  @override
+  _DiaryLogScreen createState() => _DiaryLogScreen();
+}
+
+class _DiaryLogScreen extends State<DiaryLogScreen> {
+  @override
+  void initState() {
+    super.initState();
+    sendDataToFirebase();
+  }
+
+  void sendDataToFirebase() async {
+    FirebaseFirestore.instance
+        .collection('data')
+        .add({'timestamp': FieldValue.serverTimestamp()});
+  }
+
+  //Filtering variables
   bool filter = false;
   int filter_selectedMonth =
       DateTime.now().month; // Default to the current month
   int filter_selectedYear = DateTime.now().year; // Default to the current year
-
-  DiaryLogScreen({Key? key, required this.logController}) : super(key: key);
 
   PopupMenuButton<String> _buildPopupMenuButton(BuildContext context) {
     return PopupMenuButton<String>(
@@ -116,66 +138,81 @@ class DiaryLogScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    //var diaryEntries = logController.getAllEntries();
     return Scaffold(
       appBar: AppBar(
         title: const Text('Diary Log'),
         actions: [
-          _buildPopupMenuButton(context),
+          //_buildPopupMenuButton(context),
+          IconButton(
+            tooltip: ("Log-out"),
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+            },
+            icon: const Icon(Icons.logout),
+          )
         ],
       ),
-      body: ValueListenableBuilder(
-        valueListenable: logController.logBox.listenable(),
-        builder: (context, Box box, widget) {
-          if (box.isEmpty) {
-            return const Center(
+      body: StreamBuilder<List<LogModel>>(
+        stream: widget.logController.getAllEntries(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return CircularProgressIndicator(); // Loading indicator
+          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return Center(
               child: Text('No entries found'),
             );
           } else {
-            final entries = box.values.cast<LogModel>().toList();
-            entries.sort((a, b) => b.date
-                .compareTo(a.date)); // Sort entries by date in descending order
-            return Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: ValueListenableBuilder(
-                valueListenable: logController.logBox.listenable(),
-                builder: (context, Box box, widget) {
-                  if (box.isEmpty) {
-                    return const Center(
-                      child: Text('No entries found'),
-                    );
-                  } else {
-                    final entries = box.values.cast<LogModel>().toList();
-                    entries.sort((a, b) => b.date.compareTo(a.date));
+            final logs = snapshot.data!;
+            // Build list
+            List<Widget> widgets = [];
+            DateTime? lastDate;
 
-                    List<Widget> widgets = [];
-                    DateTime? lastDate;
-                    for (int i = 0; i < entries.length; i++) {
-                      final entry = entries[i];
-                      if (lastDate == null ||
-                          entry.date.month != lastDate.month ||
-                          entry.date.year != lastDate.year) {
-                        final headerText =
-                            DateFormat('MMMM yyyy').format(entry.date);
-                        widgets.add(DateHeader(text: headerText));
-                      }
-                      widgets.add(
-                        LogEntryWidget(
-                          entry: entry,
-                          onDelete: () {
-                            logController.deleteEntryByEntry(entry);
-                          },
-                        ),
-                      );
-                      lastDate = entry.date;
-                    }
+            for (int i = 0; i < logs.length; i++) {
+              final entry = logs[i];
+              DateTime _date = widget.logController.getDatetime(entry);
 
-                    return ListView(
-                      children: widgets,
-                    );
-                  }
-                },
-              ),
+              if (lastDate == null ||
+                  _date.month != lastDate.month ||
+                  _date.year != lastDate.year) {
+                final headerText = DateFormat('MMMM yyyy').format(_date);
+                widgets.add(DateHeader(text: headerText));
+              }
+              widgets.add(
+                InkWell(
+                  // onTap: () async {
+                  //   final editedEntry = await Navigator.push(
+                  //     context,
+                  //     MaterialPageRoute(
+                  //       builder: (context) => LogEditScreen(logEntry: entry),
+                  //     ),
+                  //   );
+                  //   if (editedEntry != null) {
+                  //     // Update the edited entry in your data source (e.g., Firestore)
+                  //     // You can use widget.logController.updateEntry(editedEntry);
+                  //     // Refresh the UI to reflect changes
+                  //     setState(() {
+                  //       // Update the logs list or data source as needed
+                  //     });
+                  //   }
+                  // },
+                  child: LogEntryWidget(
+                    entry: LogModel(
+                      id: entry
+                          .id, // Assuming 'id' is the field for document ID
+                      date: entry.date,
+                      description: entry.description,
+                      rating: entry.rating,
+                    ),
+                    onDelete: () {
+                      widget.logController.deleteEntryByEntry(entry);
+                    },
+                  ),
+                ),
+              );
+              lastDate = _date;
+            }
+            return ListView(
+              children: widgets,
             );
           }
         },
