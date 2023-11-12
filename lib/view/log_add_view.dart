@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import '/model/logmodel.dart'; // Import the LogModel class
 import '/controller/log_controller.dart'; // Import your LogController
 import 'package:cloud_firestore/cloud_firestore.dart';

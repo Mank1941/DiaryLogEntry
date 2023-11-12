@@ -2,23 +2,37 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../model/logmodel.dart';
+import '../log_detail_view.dart';
 
 class LogEntryWidget extends StatelessWidget {
   final LogModel entry;
   final Function onDelete;
+  final Function onEdit;
 
-  LogEntryWidget({required this.entry, required this.onDelete});
+  const LogEntryWidget(
+      {super.key,
+      required this.entry,
+      required this.onDelete,
+      required this.onEdit});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onLongPress: () {
-        print('Long Press Registered');
+        //print('Long Press Registered');
         // edit the tile
       },
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => LogDetailScreen(entry: entry),
+          ),
+        );
+      },
       child: Container(
-        padding: EdgeInsets.all(10.0),
-        margin: EdgeInsets.symmetric(vertical: 10.0, horizontal: 5.0),
+        padding: const EdgeInsets.all(10.0),
+        margin: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 5.0),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: Colors.grey.shade900),
@@ -32,7 +46,8 @@ class LogEntryWidget extends StatelessWidget {
                 Text(
                   DateFormat('EE, MMM d').format(
                       DateTime.parse(entry.date.toDate().toString()).toLocal()),
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 Row(
                   children: List.generate(
@@ -46,15 +61,15 @@ class LogEntryWidget extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Icons.delete),
+                  icon: const Icon(Icons.delete),
                   onPressed: () => onDelete(),
                 ),
               ],
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             Text(
               entry.description,
-              style: TextStyle(fontSize: 14),
+              style: const TextStyle(fontSize: 14),
             ),
           ],
         ),

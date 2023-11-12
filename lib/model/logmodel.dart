@@ -4,10 +4,10 @@ import "package:hive/hive.dart";
 part 'logmodel.g.dart';
 
 class LogModel extends HiveObject {
-  final String? id;
-  final Timestamp date;
-  late final String description;
-  final int rating;
+  String? id;
+  Timestamp date;
+  String description;
+  int rating;
 
   LogModel(
       {this.id,

@@ -1,11 +1,7 @@
-import 'package:assignment2_2/controller/log_controller.dart';
 import 'package:assignment2_2/firebase_options.dart';
-import 'package:assignment2_2/model/logmodel.dart';
 import 'package:assignment2_2/view/log_add_view.dart';
-import 'package:assignment2_2/view/log_edit.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 
 import 'view/log_view.dart';
 import 'auth_gate.dart';
@@ -45,7 +41,7 @@ class MainApp extends StatelessWidget {
             ),
         //'/editEntry': (context) => LogEditScreen(),
       },
-      home: AuthGate(),
+      home: const AuthGate(),
     );
   }
 }
