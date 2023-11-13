@@ -1,4 +1,4 @@
-name: assignment2_2
+name: diary_log
 description: A new Flutter project.
 publish_to: 'none'
 version: 0.1.0
@@ -19,6 +19,8 @@ dependencies:
   firebase_ui_auth: ^1.9.1
   firebase_ui_oauth_google: ^1.2.13
   image_picker: ^1.0.4
+  firebase_storage: ^11.5.0
+  path_provider: 
 
 
 dev_dependencies:

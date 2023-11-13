@@ -1,12 +1,19 @@
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:path_provider/path_provider.dart';
 
 import "/model/logmodel.dart";
-import "package:assignment2_2/services/auth_service.dart";
-import 'package:assignment2_2/services/firestore_service.dart';
 
 class LogController {
+  // final AuthService _authService = AuthService();
+  // late FirestoreService _firestoreService;
+
   final user = FirebaseAuth.instance.currentUser;
   final CollectionReference logCollection;
 
@@ -27,30 +34,20 @@ class LogController {
   }
 
   Future<void> updateEntry(LogModel updatedEntry) async {
-    return await logCollection
-        .doc(updatedEntry.id)
-        .update(updatedEntry.toMap());
+    await logCollection.doc(updatedEntry.id).update(updatedEntry.toMap());
   }
 
   Future<void> deleteEntry(String id) async {
-    return await logCollection.doc(id).delete();
+    await logCollection.doc(id).delete();
   }
 
   Stream<List<LogModel>> getAllEntries() {
-    return logCollection.snapshots().map((snapshot) {
+    return logCollection
+        .orderBy('date',
+            descending: true) // Sort entries by date in descending order
+        .snapshots()
+        .map((snapshot) {
       return snapshot.docs.map((doc) => LogModel.fromMap(doc)).toList();
-    });
-  }
-
-  void printEntries() {
-    getAllEntries().listen((List<LogModel> logEntries) {
-      for (var entry in logEntries) {
-        final formattedDate =
-            DateFormat('dd, MMM, yyyy').format(getDatetime(entry));
-        print('Date: $formattedDate');
-        print('Description: ${entry.description}');
-        print('-------------------------');
-      }
     });
   }
 
@@ -59,14 +56,6 @@ class LogController {
         await logCollection.where('date', isEqualTo: date).get();
 
     return logSnapshot.docs.isNotEmpty;
-  }
-
-  DateTime getDatetime(LogModel log) {
-    return DateTime.parse(log.date.toDate().toString());
-  }
-
-  Timestamp getTimestamp(DateTime date) {
-    return Timestamp.fromDate(date);
   }
 
   Future<List<LogModel>> filterEntries(
@@ -84,6 +73,52 @@ class LogController {
   }
 
   Future<void> deleteEntryByEntry(LogModel entry) async {
-    return await logCollection.doc(entry.id).delete();
+    await logCollection.doc(entry.id).delete();
+  }
+
+  Future<String?> uploadImageToStorage(XFile image, String userId) async {
+    final FirebaseStorage storage = FirebaseStorage.instance;
+    final Reference storageRef =
+        storage.ref().child('images/$userId/${image.name}');
+
+    try {
+      final uploadTask = await storageRef.putFile(File(image.path));
+
+      if (uploadTask.state == TaskState.success) {
+        final String downloadURL = await storageRef.getDownloadURL();
+        return downloadURL;
+      }
+    } catch (e) {
+      print('Error uploading image: $e');
+      return null;
+    }
+    return null;
+  }
+
+  Future<String?> loadImageStorage(String imageUrl) async {
+    if (imageUrl.isNotEmpty) {
+      try {
+        final ref = FirebaseStorage.instance.ref(imageUrl);
+        return await ref.getDownloadURL();
+      } catch (e) {
+        print('Error loading image from Firebase Storage: $e');
+        return null;
+      }
+    }
+    return null;
+  }
+
+  Future<void> deleteImageFromStorage(String imageUrl) async {
+    Reference ref = FirebaseStorage.instance.refFromURL(imageUrl);
+    await ref.delete();
+  }
+
+  // Other methods and functionalities
+  DateTime getDatetime(LogModel log) {
+    return DateTime.parse(log.date.toDate().toString());
+  }
+
+  Timestamp getTimestamp(DateTime date) {
+    return Timestamp.fromDate(date);
   }
 }

@@ -7,13 +7,12 @@ import '../log_detail_view.dart';
 class LogEntryWidget extends StatelessWidget {
   final LogModel entry;
   final Function onDelete;
-  final Function onEdit;
 
-  const LogEntryWidget(
-      {super.key,
-      required this.entry,
-      required this.onDelete,
-      required this.onEdit});
+  const LogEntryWidget({
+    super.key,
+    required this.entry,
+    required this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -23,6 +22,7 @@ class LogEntryWidget extends StatelessWidget {
         // edit the tile
       },
       onTap: () {
+        entry.printDetails();
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -71,6 +71,9 @@ class LogEntryWidget extends StatelessWidget {
               entry.description,
               style: const TextStyle(fontSize: 14),
             ),
+            const SizedBox(height: 10),
+            if (entry.imageUrl.isNotEmpty)
+              Image.network(entry.imageUrl, height: 100, width: 100),
           ],
         ),
       ),

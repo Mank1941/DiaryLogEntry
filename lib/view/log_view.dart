@@ -1,4 +1,5 @@
-import 'package:assignment2_2/view/components/log_entry_widget.dart';
+import 'package:diary_log/services/pdf_generator.dart';
+import 'package:diary_log/view/components/log_entry_widget.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '/controller/log_controller.dart';
@@ -18,6 +19,8 @@ class DiaryLogScreen extends StatefulWidget {
 }
 
 class _DiaryLogScreen extends State<DiaryLogScreen> {
+  final PdfGenerator pdfGenerator = PdfGenerator();
+
   @override
   void initState() {
     super.initState();
@@ -30,36 +33,65 @@ class _DiaryLogScreen extends State<DiaryLogScreen> {
         .add({'timestamp': FieldValue.serverTimestamp()});
   }
 
-  //Filtering variables
-  bool filter = false;
-  int filter_selectedMonth =
-      DateTime.now().month; // Default to the current month
-  int filter_selectedYear = DateTime.now().year; // Default to the current year
+  // //Filtering variables
+  // bool filter = false;
+  // int filter_selectedMonth =
+  //     DateTime.now().month; // Default to the current month
+  // int filter_selectedYear = DateTime.now().year; // Default to the current year
+
+  Future<void> _exportPDF(List<LogModel> entries) async {
+    try {
+      await pdfGenerator.generatePDF(entries);
+      // Display a success message or handle the success scenario
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('PDF exported successfully')),
+      );
+    } catch (e) {
+      // Handle any errors that might occur during PDF generation
+      print('Error exporting PDF: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error exporting PDF')),
+      );
+    }
+  }
 
   PopupMenuButton<String> _buildPopupMenuButton(BuildContext context) {
     return PopupMenuButton<String>(
       icon: const Icon(Icons.more_vert), // Three-dot vertical icon
-      itemBuilder: (context) {
-        return <PopupMenuEntry<String>>[
-          const PopupMenuItem<String>(
-            value: 'filter',
-            child: Text('Filter'),
+      itemBuilder: (BuildContext context) {
+        return [
+          const PopupMenuItem(
+            value: 'export_pdf',
+            child: Row(
+              children: [
+                Icon(Icons.picture_as_pdf),
+                SizedBox(width: 8),
+                Text('Export PDF'),
+              ],
+            ),
           ),
-          const PopupMenuItem<String>(
-            value: 'reset filter',
-            child: Text('Reset Filter'),
-          ),
+          const PopupMenuItem(
+            value: 'log_out',
+            child: Row(
+              children: [
+                Icon(Icons.logout),
+                SizedBox(width: 8),
+                Text('Log Out'),
+              ],
+            ),
+          )
         ];
       },
-      onSelected: (String choice) async {
-        if (choice == 'filter') {
-          // Handle filter action
-          await _showFilterDialog(context);
-        } else if (choice == 'reset filter') {
-          // Handle filter action
-          filter = false;
+      onSelected: (value) async {
+        switch (value) {
+          case 'export_pdf':
+            // <List<LogModel>> diaryEntries = await LogController.getAllEntries();
+            // await _exportPDF(diaryEntries)
+            break;
+          case 'log_out':
+            await FirebaseAuth.instance.signOut();
+            break;
         }
-        //print(filter);
       },
     );
   }
@@ -119,9 +151,9 @@ class _DiaryLogScreen extends State<DiaryLogScreen> {
               onPressed: () {
                 // Filter logs for the selected month and year
                 Navigator.of(context).pop();
-                filter = true;
-                filter_selectedMonth = selectedMonth;
-                filter_selectedYear = selectedYear;
+                // filter = true;
+                // filter_selectedMonth = selectedMonth;
+                // filter_selectedYear = selectedYear;
               },
             ),
           ],
@@ -136,14 +168,14 @@ class _DiaryLogScreen extends State<DiaryLogScreen> {
       appBar: AppBar(
         title: const Text('Diary Log'),
         actions: [
-          //_buildPopupMenuButton(context),
-          IconButton(
-            tooltip: ("Log-out"),
-            onPressed: () async {
-              await FirebaseAuth.instance.signOut();
-            },
-            icon: const Icon(Icons.logout),
-          )
+          _buildPopupMenuButton(context),
+          // IconButton(
+          //   tooltip: ("Log-out"),
+          //   onPressed: () async {
+          //     await FirebaseAuth.instance.signOut();
+          //   },
+          //   icon: const Icon(Icons.logout),
+          // )
         ],
       ),
       body: StreamBuilder<List<LogModel>>(
@@ -181,16 +213,10 @@ class _DiaryLogScreen extends State<DiaryLogScreen> {
                       date: entry.date,
                       description: entry.description,
                       rating: entry.rating,
+                      imageUrl: entry.imageUrl,
                     ),
                     onDelete: () {
                       widget.logController.deleteEntryByEntry(entry);
-                    },
-                    onEdit: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => LogEditScreen(entry: entry)),
-                      );
                     },
                   ),
                 ),

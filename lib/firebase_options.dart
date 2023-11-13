@@ -66,6 +66,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '947264758008',
     projectId: 'diary-log-d8379',
     storageBucket: 'diary-log-d8379.appspot.com',
+    iosClientId: '947264758008-goq35gjgfrjcsf17b62a6mtsth9d21c3.apps.googleusercontent.com',
     iosBundleId: 'com.example.assignment22',
   );
 
@@ -75,6 +76,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '947264758008',
     projectId: 'diary-log-d8379',
     storageBucket: 'diary-log-d8379.appspot.com',
+    iosClientId: '947264758008-kds55mcctfmidffs7kdegf8en7cgklml.apps.googleusercontent.com',
     iosBundleId: 'com.example.assignment22.RunnerTests',
   );
 }

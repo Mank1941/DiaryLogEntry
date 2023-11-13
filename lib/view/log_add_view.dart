@@ -1,7 +1,11 @@
+import 'dart:io';
+
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '/model/logmodel.dart'; // Import the LogModel class
 import '/controller/log_controller.dart'; // Import your LogController
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
 
 class DiaryEntryScreen extends StatefulWidget {
   DiaryEntryScreen({Key? key}) : super(key: key);
@@ -17,6 +21,7 @@ class _DiaryEntryScreenState extends State<DiaryEntryScreen> {
       DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
   int _rating = 3;
   final TextEditingController _diaryTextController = TextEditingController();
+  String? _selectedImagePath;
 
   // Function to show date picker
   Future<void> _selectDate(BuildContext context) async {
@@ -29,6 +34,17 @@ class _DiaryEntryScreenState extends State<DiaryEntryScreen> {
     if (picked != null && picked != _selectedDate) {
       setState(() {
         _selectedDate = picked;
+      });
+    }
+  }
+
+  Future<void> _pickImage() async {
+    final ImagePicker _picker = ImagePicker();
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+
+    if (image != null) {
+      setState(() {
+        _selectedImagePath = image.path;
       });
     }
   }
@@ -48,17 +64,34 @@ class _DiaryEntryScreenState extends State<DiaryEntryScreen> {
     //Gotta convert to Timestamp cause Firestore has Timestamp and not Datetime
     Timestamp date = widget.logController.getTimestamp(_selectedDate);
 
+    // Call the image picking function
+    String? imageUrl;
+
+    if (_selectedImagePath != null) {
+      String userId = FirebaseAuth.instance.currentUser!.uid;
+      imageUrl = await widget.logController
+          .uploadImageToStorage(XFile(_selectedImagePath!), userId);
+    }
+
     final LogModel newEntry = LogModel(
       date: date,
       description: diaryText,
       rating: _rating,
+      imageUrl: imageUrl ?? '',
     );
 
+    // Save entry to Firestore
     if (!await widget.logController
         .entryExists(widget.logController.getDatetime(newEntry))) {
-      await widget.logController.addEntry(newEntry);
+      DocumentReference<Object?> documentReference =
+          await widget.logController.addEntry(newEntry);
+
+      //Update the entry with the image URL
+      if (imageUrl != null) {
+        await documentReference.update({'imageUrl': imageUrl});
+      }
+
       Navigator.pop(context);
-      //Navigator.pushNamed(context, '/logScreen');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Date already exists in the Logs")),
@@ -117,6 +150,18 @@ class _DiaryEntryScreenState extends State<DiaryEntryScreen> {
                 ),
               ],
             ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: _pickImage,
+              child: const Text("Pick Image"),
+            ),
+            if (_selectedImagePath != null)
+              Image.file(
+                File(_selectedImagePath!),
+                height: 100,
+                width: 100,
+                fit: BoxFit.cover,
+              ),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: _saveEntry,
